@@ -58,9 +58,21 @@
             </tbody>
         </table>
 
-        <div class="pagination">
-            {{ $tasks->withQueryString()->links('pagination::simple-default') }}
+        @if($tasks->hasPages())
+        <div class="pagination" style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem;">
+            @if($tasks->onFirstPage())
+                <span class="btn btn-secondary btn-sm" style="opacity: 0.5;">&laquo; Previous</span>
+            @else
+                <a href="{{ $tasks->withQueryString()->previousPageUrl() }}" class="btn btn-secondary btn-sm">&laquo; Previous</a>
+            @endif
+
+            @if($tasks->hasMorePages())
+                <a href="{{ $tasks->withQueryString()->nextPageUrl() }}" class="btn btn-secondary btn-sm">Next &raquo;</a>
+            @else
+                <span class="btn btn-secondary btn-sm" style="opacity: 0.5;">Next &raquo;</span>
+            @endif
         </div>
+        @endif
     @else
         <div class="empty-state">
             <p style="font-size: 2rem; margin-bottom: 0.5rem;">&#9776;</p>
