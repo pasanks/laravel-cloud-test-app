@@ -1,0 +1,19 @@
+id: 75199
+name: pasan-test-project
+environments:
+    production:
+        memory: 1024
+        cli-memory: 512
+        runtime: 'php-8.4:al2023'
+        build:
+            - 'composer install --no-dev'
+            - 'php artisan event:cache'
+          # - 'npm ci && npm run build && rm -rf node_modules'
+    staging:
+        memory: 1024
+        cli-memory: 512
+        runtime: 'php-8.4:al2023'
+        build:
+            - 'composer install --no-dev'
+            - 'php artisan event:cache'
+          # - 'npm ci && npm run build && rm -rf node_modules'

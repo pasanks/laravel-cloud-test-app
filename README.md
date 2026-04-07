@@ -1,6 +1,6 @@
-# Task Manager - Laravel Cloud Demo App
+# Task Manager - Laravel Cloud & Vapor Demo App
 
-A full-featured task management web application built with **Laravel 13** and **MySQL**, designed to demonstrate CRUD operations and deployment on **Laravel Cloud**.
+A full-featured task management web application built with **Laravel 13** and **MySQL**, designed to demonstrate CRUD operations and deployment on **Laravel Cloud** and **Laravel Vapor**.
 
 ---
 
@@ -19,6 +19,7 @@ Task Manager is a simple but complete web application that lets you create, read
 - **Health Check Endpoint** - `/health` endpoint for monitoring and deployment checks
 - **Database Seeder** - Pre-built sample data for quick testing
 - **Laravel Cloud Ready** - Includes `cloud.yaml` for one-click deployment
+- **Laravel Vapor Ready** - Includes `vapor.yml` for serverless deployment on AWS Lambda
 
 ### Task Fields
 
@@ -135,6 +136,7 @@ resources/views/
 routes/
 └── web.php                      # Route definitions
 cloud.yaml                       # Laravel Cloud configuration
+vapor.yml                        # Laravel Vapor configuration
 ```
 
 ---
@@ -279,6 +281,216 @@ deploy:
 
 ---
 
+## Deploying to Laravel Vapor - Step by Step Guide
+
+### What is Laravel Vapor?
+
+Laravel Vapor is a serverless deployment platform for Laravel, powered by **AWS Lambda**. It provides auto-scaling, zero server management, and pay-per-use pricing. Your application runs on AWS infrastructure without managing any servers.
+
+### Prerequisites
+
+- A [Laravel Vapor](https://vapor.laravel.com) account
+- An **AWS account** linked to Vapor
+- PHP 8.2+ and Composer installed locally
+
+### Step 1: Install Vapor Core (Already Done)
+
+This branch already includes the Vapor Core package:
+
+```bash
+composer require laravel/vapor-core
+```
+
+### Step 2: Install the Vapor CLI
+
+Install the Vapor CLI globally on your local machine:
+
+```bash
+composer global require laravel/vapor-cli
+```
+
+Make sure the Composer global bin directory is in your PATH:
+
+```bash
+# Add to your .bashrc or .zshrc:
+export PATH="$HOME/.composer/vendor/bin:$PATH"
+```
+
+### Step 3: Authenticate with Vapor
+
+Log in to your Vapor account from the terminal:
+
+```bash
+vapor login
+```
+
+Enter your Vapor credentials when prompted.
+
+### Step 4: Link Your AWS Account
+
+If you haven't already, link your AWS account in the [Vapor dashboard](https://vapor.laravel.com):
+
+1. Go to **Team Settings > AWS Accounts**
+2. Click **"Link AWS Account"**
+3. Follow the guided setup to create the necessary IAM role
+
+### Step 5: Create a Vapor Project
+
+Create a new project in the Vapor dashboard or via CLI:
+
+```bash
+vapor init
+```
+
+This will ask you to name the project and link it to your AWS account.
+
+### Step 6: Configure vapor.yml (Already Done)
+
+This repo already includes a `vapor.yml` file:
+
+```yaml
+id: 75199
+name: pasan-test-project
+environments:
+    production:
+        memory: 1024
+        cli-memory: 512
+        runtime: 'php-8.4:al2023'
+        build:
+            - 'composer install --no-dev'
+            - 'php artisan event:cache'
+          # - 'npm ci && npm run build && rm -rf node_modules'
+    staging:
+        memory: 1024
+        cli-memory: 512
+        runtime: 'php-8.4:al2023'
+        build:
+            - 'composer install --no-dev'
+            - 'php artisan event:cache'
+          # - 'npm ci && npm run build && rm -rf node_modules'
+```
+
+**What each setting does:**
+- **id**: Your Vapor project ID (update this to your project's actual ID)
+- **name**: Project name in Vapor
+- **memory**: Lambda function memory allocation in MB (1024 = 1GB)
+- **cli-memory**: Memory for CLI commands (artisan, migrations)
+- **runtime**: PHP version and OS (`php-8.4:al2023` = PHP 8.4 on Amazon Linux 2023)
+- **build**: Commands that run during the build phase
+
+> **Note:** Update the `id` field to match your actual Vapor project ID after creating the project.
+
+### Step 7: Create a Database
+
+Create a MySQL database via the Vapor dashboard or CLI:
+
+```bash
+vapor database my-database
+```
+
+Choose:
+- **Engine**: MySQL 8.0
+- **Instance size**: Start small for testing (e.g., `db.t3.micro`)
+- **Region**: Same as your Lambda functions
+
+Then, in the Vapor dashboard, go to your **environment settings** and attach the database. Vapor will auto-inject `DB_*` environment variables.
+
+### Step 8: Set Environment Variables
+
+In the Vapor dashboard, navigate to your environment and set:
+
+| Variable        | Value                          | Notes                                  |
+|-----------------|--------------------------------|----------------------------------------|
+| `APP_NAME`      | `Task Manager`                 | Your app name                          |
+| `APP_KEY`       | `base64:...`                   | Generate with `php artisan key:generate --show` |
+| `DB_CONNECTION`  | `mysql`                       | Database driver                        |
+| `CACHE_STORE`   | `dynamodb`                     | Recommended for Vapor                  |
+| `SESSION_DRIVER` | `cookie` or `dynamodb`        | Recommended for serverless             |
+| `QUEUE_CONNECTION` | `sqs`                       | Recommended for Vapor                  |
+
+> **Important:** On Vapor, filesystem is **read-only** except `/tmp`. Use S3 for file storage and DynamoDB/cookie for sessions.
+
+### Step 9: Deploy
+
+Deploy to production:
+
+```bash
+vapor deploy production
+```
+
+Or deploy to staging:
+
+```bash
+vapor deploy staging
+```
+
+Vapor will:
+1. Run build commands (`composer install`, etc.)
+2. Package your application
+3. Upload to AWS S3
+4. Deploy to Lambda
+5. Run any pending migrations (if configured)
+
+### Step 10: Run Migrations
+
+After the first deployment, run migrations:
+
+```bash
+vapor command production --command="php artisan migrate --force"
+```
+
+Or to seed the database:
+
+```bash
+vapor command production --command="php artisan db:seed --force"
+```
+
+### Step 11: Verify Deployment
+
+1. Vapor will provide a URL (e.g., `https://xxxxx.vapor-farm-xxxxx.com`)
+2. Visit the URL to see the Task Manager
+3. You can also set a **custom domain** in the Vapor dashboard
+4. Check the health endpoint: `https://your-domain.com/health`
+
+### Vapor-Specific Considerations
+
+| Topic | Details |
+|-------|---------|
+| **File Storage** | Use S3 instead of local disk (`FILESYSTEM_DISK=s3`) |
+| **Sessions** | Use `cookie` or `dynamodb` (not `file`) |
+| **Cache** | Use `dynamodb` (not `file`) |
+| **Queues** | Use SQS (`QUEUE_CONNECTION=sqs`) |
+| **File Uploads** | Must go to S3 — Lambda has a read-only filesystem |
+| **Max Execution** | Lambda timeout is 15 minutes max |
+| **Cold Starts** | First request after inactivity may be slower (~1-2s) |
+
+### Vapor Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| 500 error | Check `vapor logs production` for details |
+| Database timeout | Ensure DB and Lambda are in the same VPC/region |
+| File write errors | Use S3 for storage, DynamoDB for cache/sessions |
+| Out of memory | Increase `memory` in `vapor.yml` |
+| Build failed | Check build output with `vapor deploy production --verbose` |
+
+### Useful Vapor CLI Commands
+
+```bash
+vapor login                          # Authenticate
+vapor deploy production              # Deploy to production
+vapor deploy staging                 # Deploy to staging
+vapor logs production                # View production logs
+vapor command production             # Run artisan commands
+vapor rollback production            # Rollback to previous deployment
+vapor env:pull production            # Download .env file
+vapor env:push production            # Upload .env file
+vapor database:shell my-database     # Connect to database
+vapor tinker production              # Run Tinker remotely
+```
+
+---
+
 ## Running Tests
 
 ```bash
@@ -293,7 +505,8 @@ php artisan test
 - **Language:** PHP 8.4
 - **Database:** MySQL 8.0+
 - **Frontend:** Blade templates with inline CSS
-- **Deployment:** Laravel Cloud
+- **Deployment:** Laravel Cloud / Laravel Vapor (AWS Lambda)
+- **Monitoring:** Laravel Nightwatch
 
 ---
 
