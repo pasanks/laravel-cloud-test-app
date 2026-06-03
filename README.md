@@ -1,4 +1,4 @@
-# Task Manager - Laravel Cloud Demo App
+# Task Manager - Laravel Cloud Demo App test app
 
 A full-featured task management web application built with **Laravel 13** and **MySQL**, designed to demonstrate CRUD operations and deployment on **Laravel Cloud**.
 
