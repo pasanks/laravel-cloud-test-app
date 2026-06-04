@@ -8,7 +8,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('app:custom-notification-command')->everyMinute()->onOneServer();
-Schedule::command('app:before-meeting-notification')->everyMinute()->onOneServer();
-Schedule::command('app:before-schedule-notification')->everyMinute()->onOneServer();
-Schedule::command('meetings:update-status')->hourly()->onOneServer();
+Schedule::command('app:custom-notification-command')->everyMinute()->onOneServer()->appendOutputTo(storage_path('logs/scheduler.log'));
+Schedule::command('app:before-meeting-notification')->everyMinute()->onOneServer()->appendOutputTo(storage_path('logs/scheduler.log'));
+Schedule::command('app:before-schedule-notification')->everyMinute()->onOneServer()->appendOutputTo(storage_path('logs/scheduler.log'));
+Schedule::command('meetings:update-status')->hourly()->onOneServer()->appendOutputTo(storage_path('logs/scheduler.log'));
