@@ -12,8 +12,9 @@ class CustomNotificationCommand extends Command
 
     public function handle(): int
     {
-        Log::info('app:custom-notification-command ran', ['timestamp' => now()->toIso8601String()]);
-        $this->info('Custom notification command executed at ' . now());
+        $message = 'Custom notification command executed at ' . now();
+        Log::info($message);
+        $this->info($message);
 
         return self::SUCCESS;
     }
